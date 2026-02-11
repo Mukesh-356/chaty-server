@@ -1,3 +1,6 @@
+console.log("MONGO URL:", process.env.MONGO_URL);
+
+
 const express = require("express");
 const http = require("http");
 const cors = require("cors");
