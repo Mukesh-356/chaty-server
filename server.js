@@ -12,12 +12,24 @@ dotenv.config();
 
 const app = express();
 const server = http.createServer(app);
+
+/* ================= SOCKET CORS FIX ================= */
 const io = socketIO(server, {
-  cors: { origin: "*" },
+  cors: {
+    origin: "https://chaty-front-olive.vercel.app",
+    methods: ["GET", "POST"],
+    credentials: true,
+  },
 });
+/* =================================================== */
 
 // Middleware
-app.use(cors());
+app.use(cors({
+  origin: "https://chaty-front-olive.vercel.app",
+  methods: ["GET", "POST", "PUT", "DELETE"],
+  credentials: true,
+}));
+
 app.use(express.json());
 
 // Routes
@@ -31,23 +43,20 @@ app.use("/api/admin", adminRoutes);
 app.use("/api/network", networkRoutes);
 app.use("/api/messages", messageRoutes);
 
-// Serve uploaded files
+// Serve uploads
 app.use("/uploads", express.static("uploads"));
 
-/* ================== MONGODB CONNECT FIX ================== */
+/* ================= MONGODB CONNECT ================= */
 mongoose
-  .connect(process.env.MONGO_URL, {   // 🔥 FIX HERE (MONGO_URL)
-    useNewUrlParser: true,
-    useUnifiedTopology: true,
-  })
+  .connect(process.env.MONGO_URL)
   .then(() => console.log("🔥 MongoDB connected successfully"))
   .catch((err) => console.error("❌ MongoDB connection error:", err));
-/* ========================================================= */
+/* =================================================== */
 
-// Online Users Mapping
+// Online users map
 let onlineUsers = {};
 
-// Socket.IO
+// Socket logic
 io.on("connection", (socket) => {
 
   socket.on("user-joined", (username) => {
@@ -65,7 +74,6 @@ io.on("connection", (socket) => {
     socket.broadcast.emit("user-stop-typing");
   });
 
-  // Message send
   socket.on("chat-message", async (msg) => {
     const fullMsg = {
       ...msg,
@@ -80,7 +88,7 @@ io.on("connection", (socket) => {
       console.error("❌ Failed to store message:", err);
     }
 
-    // Direct
+    // Direct message
     if (msg.to && onlineUsers[msg.to]) {
       const receiver = onlineUsers[msg.to];
       io.to(receiver).emit("receive-message", fullMsg);
@@ -103,5 +111,5 @@ io.on("connection", (socket) => {
 // Start server
 const PORT = process.env.PORT || 5000;
 server.listen(PORT, () =>
-  console.log(`🚀 Server running on http://localhost:${PORT}`)
+  console.log(`🚀 Server running on port ${PORT}`)
 );
